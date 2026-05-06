@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+miner_env/
+.Python
+*.bak
+captured_chunks/
+data/
+.pytest_cache/
+.DS_Store
+*.egg-info/
