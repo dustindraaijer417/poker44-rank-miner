@@ -11,6 +11,3 @@ data/
 .pytest_cache/
 .DS_Store
 *.egg-info/
-# Model weights are withheld from public release.
-*.pkl
-neurons/model_*.pkl
