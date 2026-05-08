@@ -98,10 +98,12 @@ class Miner(BaseMinerNeuron):
                 "private_data_attestation": (
                     "This miner does not train on validator-private data."
                 ),
-                "data_attestation": (
-                    "This miner does not train on validator-private data."
-                ),
             },
+        )
+        # build_local_model_manifest only emits hardcoded keys; inject data_attestation
+        # (new validator policy field name) post-build alongside private_data_attestation.
+        self.model_manifest["data_attestation"] = self.model_manifest.get(
+            "private_data_attestation", "This miner does not train on validator-private data."
         )
         self.manifest_compliance = evaluate_manifest_compliance(self.model_manifest)
         self.manifest_digest = manifest_digest(self.model_manifest)
