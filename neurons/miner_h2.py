@@ -92,6 +92,7 @@ class Miner(BaseMinerNeuron):
                 ),
                 "training_data_sources": ["public_benchmark", "generated_bots"],
                 "private_data_attestation": "Does not train on validator-private data.",
+                "data_attestation": "Does not train on validator-private data.",
             },
         )
         self.manifest_compliance = evaluate_manifest_compliance(self.model_manifest)

@@ -98,6 +98,9 @@ class Miner(BaseMinerNeuron):
                 "private_data_attestation": (
                     "This miner does not train on validator-private data."
                 ),
+                "data_attestation": (
+                    "This miner does not train on validator-private data."
+                ),
             },
         )
         self.manifest_compliance = evaluate_manifest_compliance(self.model_manifest)
