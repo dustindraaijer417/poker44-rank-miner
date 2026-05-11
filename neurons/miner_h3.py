@@ -52,6 +52,21 @@ CAPTURE_RETAIN = 100
 _BLIND = ("small_blind", "big_blind", "other")
 
 
+def _resolve_public_repo_commit() -> str:
+    """Return the HEAD commit of the published miner repo so manifest identity
+    is derived directly from the public source, not a runtime override."""
+    import subprocess
+    public_repo = Path(__file__).resolve().parents[1] / "public-miner-repo"
+    try:
+        out = subprocess.run(
+            ["git", "-C", str(public_repo), "rev-parse", "HEAD"],
+            capture_output=True, text=True, timeout=5, check=True,
+        )
+        return out.stdout.strip()
+    except Exception:
+        return ""
+
+
 class Miner(BaseMinerNeuron):
     """h3: v17 real-GT ensemble + adaptive Otsu + 45% bot cap (aggressive)."""
 
@@ -76,7 +91,7 @@ class Miner(BaseMinerNeuron):
                 "framework": "v17-ensemble+adaptive-otsu-cap45",
                 "license": "MIT",
                 "repo_url": "https://github.com/dustindraaijer417/poker44-rank-miner",
-                "repo_commit": "",
+                "repo_commit": _resolve_public_repo_commit(),
                 "notes": "v17 (XGB+LGBM, real-GT trained, val_AP=1.0) + adaptive Otsu + 45% bot cap (aggressive, near 50/50 distribution).",
                 "open_source": True,
                 "inference_mode": "remote",

@@ -57,6 +57,21 @@ CAPTURE_DIR = Path(__file__).resolve().parent / "captured_chunks_h2"
 CAPTURE_RETAIN = 100
 
 
+def _resolve_public_repo_commit() -> str:
+    """Return the HEAD commit of the published miner repo so manifest identity
+    is derived directly from the public source, not a runtime override."""
+    import subprocess
+    public_repo = Path(__file__).resolve().parents[1] / "public-miner-repo"
+    try:
+        out = subprocess.run(
+            ["git", "-C", str(public_repo), "rev-parse", "HEAD"],
+            capture_output=True, text=True, timeout=5, check=True,
+        )
+        return out.stdout.strip()
+    except Exception:
+        return ""
+
+
 class Miner(BaseMinerNeuron):
     """h2: v17 real-GT ensemble + 3-arch voting + 8% bot cap (conservative)."""
 
@@ -82,7 +97,7 @@ class Miner(BaseMinerNeuron):
                 "framework": "v17-ensemble+voting+adaptive-otsu-cap8",
                 "license": "MIT",
                 "repo_url": "https://github.com/dustindraaijer417/poker44-rank-miner",
-                "repo_commit": "",
+                "repo_commit": _resolve_public_repo_commit(),
                 "notes": "v17 (XGB+LGBM, real-GT trained) + 3-arch voting + adaptive Otsu + 8% bot cap (conservative).",
                 "open_source": True,
                 "inference_mode": "remote",

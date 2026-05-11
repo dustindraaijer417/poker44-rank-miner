@@ -42,6 +42,21 @@ CAPTURE_DIR = Path(__file__).resolve().parent / "captured_chunks"
 CAPTURE_RETAIN = 200
 
 
+def _resolve_public_repo_commit() -> str:
+    """Return the HEAD commit of the published miner repo so manifest identity
+    is derived directly from the public source, not a runtime override."""
+    import subprocess
+    public_repo = Path(__file__).resolve().parents[1] / "public-miner-repo"
+    try:
+        out = subprocess.run(
+            ["git", "-C", str(public_repo), "rev-parse", "HEAD"],
+            capture_output=True, text=True, timeout=5, check=True,
+        )
+        return out.stdout.strip()
+    except Exception:
+        return ""
+
+
 def _hybrid_extract(chunk):
     """v12 features = v1 (83) + OLD (239) concatenated."""
     return np.concatenate([v1_extract(chunk), old_extract(chunk)]).astype(np.float32)
@@ -86,7 +101,7 @@ class Miner(BaseMinerNeuron):
                 "repo_url": "https://github.com/dustindraaijer417/poker44-rank-miner",
                 # repo_commit is supplied via POKER44_MODEL_REPO_COMMIT env var
                 # so file contents stay stable across commits.
-                "repo_commit": "",
+                "repo_commit": _resolve_public_repo_commit(),
                 "notes": "V1-tuned heuristic primary + v14 ranker secondary, capped 0.49.",
                 "open_source": True,
                 "inference_mode": "remote",
