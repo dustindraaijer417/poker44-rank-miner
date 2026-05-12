@@ -54,18 +54,29 @@ def adaptive_safe_calibrate(
     raw_scores: Sequence[float],
     *,
     max_bot_fraction: float = 0.10,
+    min_bot_fraction: float = 0.0,
 ) -> np.ndarray:
-    """Adaptive Otsu split + hard safety cap on bot fraction.
+    """Adaptive Otsu split + safety cap + (optional) recall floor.
+
+    Reward formula context: `(0.65 * AP + 0.35 * recall) * (1 - FPR)^2`, with
+    FPR >= 0.10 hard-zeroing the score. AP uses raw ranking, recall uses
+    predictions > 0.5. Otsu alone finds the natural bimodal split — fine for
+    AP but tends to under-predict bots when model output is heavily peaked
+    on humans, leaving recall near zero.
+
+    `min_bot_fraction` forces a minimum number of top-ranked chunks above the
+    bot band so recall doesn't collapse. The cost is FPR risk if the top
+    forced picks are actually humans; calling miners must keep this below
+    the 10% cliff (so min_bot_fraction * batch_size <= expected_humans * 0.10).
 
     Args:
-        raw_scores: Raw model probabilities for the batch (40 chunks typically).
-        max_bot_fraction: Maximum fraction of batch that can be classified as bot.
-            AceGuard winning config uses 0.08; we use 0.10 for slightly more
-            recall at minor extra FPR risk.
+        raw_scores: Raw model probabilities for the batch.
+        max_bot_fraction: Maximum fraction of batch that can be bot.
+        min_bot_fraction: Minimum fraction of batch that must be bot —
+            forces top-N picks above 0.5 even if Otsu finds fewer.
 
     Returns:
-        np.array of calibrated scores in [0.05, 0.95] range, with at most
-        max_bot_fraction * len(arr) chunks scoring > 0.5.
+        np.array of calibrated scores in [0.05, 0.95], rank-preserving.
     """
     arr = np.asarray(raw_scores, dtype=np.float64)
     n = len(arr)
@@ -77,13 +88,19 @@ def adaptive_safe_calibrate(
     is_bot = arr > threshold
     n_bot = int(is_bot.sum())
 
-    # Step 2: Hard safety cap
+    # Step 2: Recall floor — promote top-ranked chunks if Otsu under-predicts
+    min_bots = int(n * min_bot_fraction)
+    if n_bot < min_bots:
+        sorted_idx = np.argsort(-arr)  # descending
+        is_bot = np.zeros(n, dtype=bool)
+        is_bot[sorted_idx[:min_bots]] = True
+        n_bot = min_bots
+
+    # Step 3: Hard safety cap
     max_bots = int(n * max_bot_fraction)
     if n_bot > max_bots:
-        # Demote weakest bot predictions to human band
         bot_idx = np.where(is_bot)[0]
         bot_scores = arr[bot_idx]
-        # Sort ascending — weakest first; keep top max_bots
         sorted_by_score = bot_idx[np.argsort(bot_scores)]
         to_demote = set(sorted_by_score[: n_bot - max_bots].tolist())
         is_bot = np.array([(i in set(np.where(is_bot)[0]) and i not in to_demote) for i in range(n)])
