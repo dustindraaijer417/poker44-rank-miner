@@ -92,7 +92,7 @@ class Miner(BaseMinerNeuron):
                 Path(__file__).resolve().parent / "aceguard_calibration.py",
             ],
             defaults={
-                "model_name": "poker44-v17-voting-h2",
+                "model_name": "poker44-v19-voting-h2",
                 "model_version": "17",
                 "framework": "v17-ensemble+voting+adaptive-otsu-cap8",
                 "license": "MIT",

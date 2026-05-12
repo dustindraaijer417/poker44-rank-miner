@@ -86,7 +86,7 @@ class Miner(BaseMinerNeuron):
                 Path(__file__).resolve().parent / "aceguard_calibration.py",
             ],
             defaults={
-                "model_name": "poker44-real-truth-v17-cap45",
+                "model_name": "poker44-stable-features-v19-cap45",
                 "model_version": "17",
                 "framework": "v17-ensemble+adaptive-otsu-cap45",
                 "license": "MIT",

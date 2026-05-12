@@ -94,7 +94,7 @@ class Miner(BaseMinerNeuron):
                 Path(__file__).resolve().parent / "models.py",
             ],
             defaults={
-                "model_name": "poker44-real-truth-v17-cap30",
+                "model_name": "poker44-stable-features-v19-cap30",
                 "model_version": "17",
                 "framework": "xgb+lgbm-real-gt+otsu-cap30",
                 "license": "MIT",
