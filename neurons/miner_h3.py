@@ -40,8 +40,8 @@ from neurons.v14_features import extract_v14_features
 from neurons.aceguard_calibration import adaptive_safe_calibrate
 from neurons.models import _EnsembleModel, _TripleEnsemble, _V12RobustEnsemble, _V14Ensemble  # noqa: F401
 try:
-    from neurons.v19_scorer import V19Scorer
-    _v17 = V19Scorer()  # variable name retained, holds v19 (stable-features ensemble)
+    from neurons.ensemble_scorer import EnsembleScorer
+    _v17 = EnsembleScorer(weight_v19=0.7)  # 0.7 v19 + 0.3 v20-transformer
 except Exception:
     _v17 = None
 
@@ -82,11 +82,13 @@ class Miner(BaseMinerNeuron):
             implementation_files=[
                 Path(__file__).resolve(),
                 Path(__file__).resolve().parent / "v19_scorer.py",
+                Path(__file__).resolve().parent / "v20_scorer.py",
+                Path(__file__).resolve().parent / "ensemble_scorer.py",
                 Path(__file__).resolve().parent / "v14_features.py",
                 Path(__file__).resolve().parent / "aceguard_calibration.py",
             ],
             defaults={
-                "model_name": "poker44-stable-features-v19-cap45",
+                "model_name": "poker44-ensemble-v19-v20-cap45",
                 "model_version": "17",
                 "framework": "v17-ensemble+adaptive-otsu-cap45",
                 "license": "MIT",
