@@ -47,8 +47,8 @@ from neurons.v16_heuristic import score_chunk_v16
 from neurons.aceguard_calibration import adaptive_safe_calibrate
 from neurons.models import _EnsembleModel, _TripleEnsemble, _V12RobustEnsemble, _V14Ensemble  # noqa: F401
 try:
-    from neurons.v17_scorer import V17Scorer
-    _v17 = V17Scorer()
+    from neurons.v19_scorer import V19Scorer
+    _v17 = V19Scorer()  # variable name retained, holds v19 (stable-features ensemble)
 except Exception:
     _v17 = None
 
@@ -86,7 +86,7 @@ class Miner(BaseMinerNeuron):
             repo_root=repo_root,
             implementation_files=[
                 Path(__file__).resolve(),
-                Path(__file__).resolve().parent / "v17_scorer.py",
+                Path(__file__).resolve().parent / "v19_scorer.py",
                 Path(__file__).resolve().parent / "v14_features.py",
                 Path(__file__).resolve().parent / "v16_heuristic.py",
                 Path(__file__).resolve().parent / "aceguard_calibration.py",

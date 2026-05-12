@@ -29,8 +29,8 @@ from neurons.v15_heuristic import score_chunk_v15
 from neurons.v16_heuristic import score_chunk_v16
 from neurons.models import _EnsembleModel, _TripleEnsemble, _V12RobustEnsemble, _V14Ensemble  # noqa: F401  -- pickle
 try:
-    from neurons.v17_scorer import V17Scorer
-    _v17 = V17Scorer()
+    from neurons.v19_scorer import V19Scorer
+    _v17 = V19Scorer()  # variable name retained, holds v19 (stable-features ensemble)
 except Exception as _e:
     _v17 = None
 
@@ -88,7 +88,7 @@ class Miner(BaseMinerNeuron):
                 Path(__file__).resolve().parent / "v14_features.py",
                 Path(__file__).resolve().parent / "v15_heuristic.py",
                 Path(__file__).resolve().parent / "v16_heuristic.py",
-                Path(__file__).resolve().parent / "v17_scorer.py",
+                Path(__file__).resolve().parent / "v19_scorer.py",
                 Path(__file__).resolve().parent / "aceguard_calibration.py",
                 Path(__file__).resolve().parent / "feature_extraction.py",
                 Path(__file__).resolve().parent / "models.py",
