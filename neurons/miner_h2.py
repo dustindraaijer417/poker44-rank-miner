@@ -47,8 +47,8 @@ from neurons.v16_heuristic import score_chunk_v16
 from neurons.aceguard_calibration import adaptive_safe_calibrate
 from neurons.models import _EnsembleModel, _TripleEnsemble, _V12RobustEnsemble, _V14Ensemble  # noqa: F401
 try:
-    from neurons.travis_scorer import TravisScorer
-    _v17 = TravisScorer()  # h2 (UID 176) also runs Travis identity to win tiebreak over UID 211
+    from neurons.ensemble_scorer import EnsembleScorer
+    _v17 = EnsembleScorer(weight_v19=0.7)  # ORIGINAL v19+v20 ensemble (h2 baseline)
 except Exception:
     _v17 = None
 
@@ -86,15 +86,15 @@ class Miner(BaseMinerNeuron):
             repo_root=repo_root,
             implementation_files=[
                 Path(__file__).resolve(),
-                Path(__file__).resolve().parent / "travis_scorer.py",
-                Path(__file__).resolve().parent / "travis_inference.py",
-                Path(__file__).resolve().parent / "travis_features.py",
+                Path(__file__).resolve().parent / "v19_scorer.py",
+                Path(__file__).resolve().parent / "v20_scorer.py",
+                Path(__file__).resolve().parent / "ensemble_scorer.py",
                 Path(__file__).resolve().parent / "v14_features.py",
                 Path(__file__).resolve().parent / "v16_heuristic.py",
                 Path(__file__).resolve().parent / "aceguard_calibration.py",
             ],
             defaults={
-                "model_name": "poker44-benchmark-supervised-h2",
+                "model_name": "poker44-ensemble-v19-v20-voting-h2",
                 "model_version": "17",
                 "framework": "v17-ensemble+voting+adaptive-otsu-cap8",
                 "license": "MIT",
@@ -159,17 +159,46 @@ class Miner(BaseMinerNeuron):
         return synapse
 
     def _score_batch(self, chunks):
-        """h2: raw Travis-style supervised output (no Otsu, no banding)."""
+        """h2: v19+v20 ensemble + 3-arch voting + adaptive Otsu, 8% cap (conservative)."""
         n = len(chunks)
         if n == 0:
             return []
         try:
-            if _v17 is None:
-                return [0.5] * n
-            raw = _v17.score_batch(chunks)
-            return [round(float(s), 6) for s in raw]
+            if _v17 is not None:
+                v17_probs = _v17.score_batch(chunks)
+            else:
+                v17_probs = np.full(n, 0.25)
+
+            heuristic = np.array([score_chunk_v16(c) if c else 0.25 for c in chunks])
+            heuristic_norm = np.clip(heuristic / 0.49, 0.0, 1.0)
+
+            if self.model is not None:
+                X_list = []
+                for chunk in chunks:
+                    if not chunk:
+                        X_list.append(np.zeros(355, dtype=np.float32))
+                    else:
+                        feats = extract_v14_features(chunk)
+                        feats = np.nan_to_num(feats, nan=0.0, posinf=0.0, neginf=0.0)
+                        X_list.append(feats)
+                X = np.array(X_list, dtype=np.float32)
+                df = pd.DataFrame(X, columns=self.feature_names)
+                rank = np.clip(self.model.predict_rank(df.values), 0.0, 1.0)
+            else:
+                rank = v17_probs.copy()
+
+            votes = (
+                (v17_probs > 0.5).astype(int)
+                + (rank > 0.5).astype(int)
+                + (heuristic_norm > 0.5).astype(int)
+            )
+            mean_signal = (0.7 * v17_probs + 0.2 * rank + 0.1 * heuristic_norm)
+            consensus = np.where(votes >= 2, mean_signal, mean_signal / 2.0)
+
+            calibrated = adaptive_safe_calibrate(consensus.tolist(), max_bot_fraction=0.08)
+            return [round(float(s), 6) for s in calibrated]
         except Exception as e:
-            bt.logging.warning(f"Travis path failed: {e}; using fallback")
+            bt.logging.warning(f"Ensemble path failed: {e}; using fallback")
             return [0.25] * n
 
     def _score_chunk(self, chunk):
