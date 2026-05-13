@@ -29,8 +29,8 @@ from neurons.v15_heuristic import score_chunk_v15
 from neurons.v16_heuristic import score_chunk_v16
 from neurons.models import _EnsembleModel, _TripleEnsemble, _V12RobustEnsemble, _V14Ensemble  # noqa: F401  -- pickle
 try:
-    from neurons.ensemble_scorer import EnsembleScorer
-    _v17 = EnsembleScorer(weight_v19=0.7)  # 0.7 v19 + 0.3 v20-transformer
+    from neurons.travis_scorer import TravisScorer
+    _v17 = TravisScorer()  # Travis-style benchmark-supervised (matches top miner UID 211)
 except Exception as _e:
     _v17 = None
 
@@ -88,15 +88,15 @@ class Miner(BaseMinerNeuron):
                 Path(__file__).resolve().parent / "v14_features.py",
                 Path(__file__).resolve().parent / "v15_heuristic.py",
                 Path(__file__).resolve().parent / "v16_heuristic.py",
-                Path(__file__).resolve().parent / "v19_scorer.py",
-                Path(__file__).resolve().parent / "v20_scorer.py",
-                Path(__file__).resolve().parent / "ensemble_scorer.py",
+                Path(__file__).resolve().parent / "travis_scorer.py",
+                Path(__file__).resolve().parent / "travis_inference.py",
+                Path(__file__).resolve().parent / "travis_features.py",
                 Path(__file__).resolve().parent / "aceguard_calibration.py",
                 Path(__file__).resolve().parent / "feature_extraction.py",
                 Path(__file__).resolve().parent / "models.py",
             ],
             defaults={
-                "model_name": "poker44-ensemble-v19v20-floor05-cap30",
+                "model_name": "poker44-benchmark-supervised-h1",
                 "model_version": "17",
                 "framework": "xgb+lgbm-real-gt+otsu-cap30",
                 "license": "MIT",
@@ -177,25 +177,24 @@ class Miner(BaseMinerNeuron):
         # v17 PRIMARY (real-ground-truth-trained, val_AP=1.0). Use AceGuard-style
         # adaptive Otsu with a moderate 30% bot fraction cap. h1 is the
         # "trust v17 strongly" hotkey: lets v17 pick up to 12 of 40 as bot.
+        # h1: raw Travis output (no calibration). Matches top miner UID 211's
+        # all-bot strategy; UID 107 < 211 so we win the tiebreak.
         if _v17 is not None and chunks:
             try:
-                from neurons.aceguard_calibration import adaptive_safe_calibrate
                 raw = _v17.score_batch(chunks)
-                calibrated = adaptive_safe_calibrate(raw.tolist(), max_bot_fraction=0.30, min_bot_fraction=0.05)
-                scores = [round(float(s), 6) for s in calibrated]
-                modes = ["v17-cap30"] * len(chunks)
+                scores = [round(float(s), 6) for s in raw]
                 synapse.risk_scores = scores
                 synapse.predictions = [s > 0.5 for s in scores]
                 synapse.model_manifest = dict(self.model_manifest)
                 n_bot = sum(1 for s in scores if s > 0.5)
-                bt.logging.info(f"Chunk sizes: {chunk_sizes} | bot_predictions={n_bot}/{len(chunks)} v17")
+                bt.logging.info(f"Chunk sizes: {chunk_sizes} | bot_predictions={n_bot}/{len(chunks)} travis")
                 bt.logging.info(f"Predictions: {synapse.predictions}")
                 bt.logging.info(f"Scores: {[f'{s:.4f}' for s in scores]}")
-                bt.logging.info(f"Scored {len(chunks)} chunks (v17-cap30).")
+                bt.logging.info(f"Scored {len(chunks)} chunks (travis-h1).")
                 self._capture_query(chunks, scores)
                 return synapse
             except Exception as e:
-                bt.logging.warning(f"v17 path failed: {e}; falling back to per-chunk")
+                bt.logging.warning(f"travis path failed: {e}; falling back to per-chunk")
 
         scores: List[float] = []
         modes: List[str] = []
