@@ -29,8 +29,8 @@ from neurons.v15_heuristic import score_chunk_v15
 from neurons.v16_heuristic import score_chunk_v16
 from neurons.models import _EnsembleModel, _TripleEnsemble, _V12RobustEnsemble, _V14Ensemble  # noqa: F401  -- pickle
 try:
-    from neurons.v22_scorer import V22Scorer
-    _v17 = V22Scorer()  # h1 pure v22 transformer (precision, ~10% bot rate, 96% decisive)
+    from neurons.v24_scorer import V24Scorer
+    _v17 = V24Scorer()  # h1 v24 transformer (gen4, variable-length aux, 50 epochs)
 except Exception as _e:
     _v17 = None
 
@@ -88,13 +88,13 @@ class Miner(BaseMinerNeuron):
                 Path(__file__).resolve().parent / "v14_features.py",
                 Path(__file__).resolve().parent / "v15_heuristic.py",
                 Path(__file__).resolve().parent / "v16_heuristic.py",
-                Path(__file__).resolve().parent / "v22_scorer.py",
+                Path(__file__).resolve().parent / "v24_scorer.py",
                 Path(__file__).resolve().parent / "aceguard_calibration.py",
                 Path(__file__).resolve().parent / "feature_extraction.py",
                 Path(__file__).resolve().parent / "models.py",
             ],
             defaults={
-                "model_name": "poker44-v22-transformer-precision-h1",
+                "model_name": "poker44-v24-transformer-h1",
                 "model_version": "17",
                 "framework": "xgb+lgbm-real-gt+otsu-cap30",
                 "license": "MIT",
