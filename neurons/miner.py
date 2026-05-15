@@ -30,7 +30,7 @@ from neurons.v16_heuristic import score_chunk_v16
 from neurons.models import _EnsembleModel, _TripleEnsemble, _V12RobustEnsemble, _V14Ensemble  # noqa: F401  -- pickle
 try:
     from neurons.ensemble_scorer import EnsembleScorer
-    _v17 = EnsembleScorer(weight_v19=0.7)  # 0.7 v19 + 0.3 v20-transformer (ORIGINAL ensemble)
+    _v17 = EnsembleScorer(weight_v19=0.0)  # h1 pure v21 transformer (aggressive, ~32% bot rate)
 except Exception as _e:
     _v17 = None
 
@@ -89,14 +89,14 @@ class Miner(BaseMinerNeuron):
                 Path(__file__).resolve().parent / "v15_heuristic.py",
                 Path(__file__).resolve().parent / "v16_heuristic.py",
                 Path(__file__).resolve().parent / "v19_scorer.py",
-                Path(__file__).resolve().parent / "v20_scorer.py",
+                Path(__file__).resolve().parent / "v21_scorer.py",
                 Path(__file__).resolve().parent / "ensemble_scorer.py",
                 Path(__file__).resolve().parent / "aceguard_calibration.py",
                 Path(__file__).resolve().parent / "feature_extraction.py",
                 Path(__file__).resolve().parent / "models.py",
             ],
             defaults={
-                "model_name": "poker44-ensemble-v19v20-floor05-cap30",
+                "model_name": "poker44-v21-transformer-aggressive-h1",
                 "model_version": "17",
                 "framework": "xgb+lgbm-real-gt+otsu-cap30",
                 "license": "MIT",
@@ -184,9 +184,10 @@ class Miner(BaseMinerNeuron):
             try:
                 from neurons.aceguard_calibration import adaptive_safe_calibrate
                 raw = _v17.score_batch(chunks)
-                # h1 MODERATE: v1.5 harder batches broke Travis's all-bot strategy
-                # (UID 211 went 4.28 -> 0.00 within 24h). Revert to discriminating mode.
-                calibrated = adaptive_safe_calibrate(raw.tolist(), max_bot_fraction=0.30, min_bot_fraction=0.05)
+                # h1 AGGRESSIVE: pure v21 transformer ranking, raw output (no Otsu).
+                # v21 naturally calls ~32% bot on live data; trust its discrimination.
+                # Light cap at 50% to avoid extreme over-calling.
+                calibrated = adaptive_safe_calibrate(raw.tolist(), max_bot_fraction=0.50, min_bot_fraction=0.0)
                 scores = [round(float(s), 6) for s in calibrated]
                 synapse.risk_scores = scores
                 synapse.predictions = [s > 0.5 for s in scores]

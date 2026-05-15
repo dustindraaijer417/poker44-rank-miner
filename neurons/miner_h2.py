@@ -48,7 +48,7 @@ from neurons.aceguard_calibration import adaptive_safe_calibrate
 from neurons.models import _EnsembleModel, _TripleEnsemble, _V12RobustEnsemble, _V14Ensemble  # noqa: F401
 try:
     from neurons.ensemble_scorer import EnsembleScorer
-    _v17 = EnsembleScorer(weight_v19=0.7)  # ORIGINAL v19+v20 ensemble (h2 baseline)
+    _v17 = EnsembleScorer(weight_v19=0.85)  # h2: heavy v19 + light v21 — conservative baseline
 except Exception:
     _v17 = None
 
@@ -87,14 +87,14 @@ class Miner(BaseMinerNeuron):
             implementation_files=[
                 Path(__file__).resolve(),
                 Path(__file__).resolve().parent / "v19_scorer.py",
-                Path(__file__).resolve().parent / "v20_scorer.py",
+                Path(__file__).resolve().parent / "v21_scorer.py",
                 Path(__file__).resolve().parent / "ensemble_scorer.py",
                 Path(__file__).resolve().parent / "v14_features.py",
                 Path(__file__).resolve().parent / "v16_heuristic.py",
                 Path(__file__).resolve().parent / "aceguard_calibration.py",
             ],
             defaults={
-                "model_name": "poker44-ensemble-v19-v20-voting-h2",
+                "model_name": "poker44-v19-heavy-v21-conservative-h2",
                 "model_version": "17",
                 "framework": "v17-ensemble+voting+adaptive-otsu-cap8",
                 "license": "MIT",

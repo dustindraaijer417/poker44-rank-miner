@@ -1,13 +1,14 @@
-"""Blended scorer combining v19 (XGB+LGBM stable features) with v20 transformer.
+"""Blended scorer combining v19 (XGB+LGBM stable features) with v21 transformer.
 
-The ensemble exists so a single architecture failure doesn't blank our signal:
-- v19 is a tree model on aggregated structural features — robust to most
-  payload changes, fast inference, easy to inspect.
-- v20 is a small transformer over per-action sequences — captures patterns
-  that aggregation throws away (call-call-call-fold vs bet-raise-raise).
+v21 is a 67K-param hierarchical action transformer trained on benchmark
+labels + auxiliary human corpus (poker_hands_combined.json.gz, 32K hands).
+The transformer captures action-sequence patterns that v19's aggregated
+features cannot, and the aux corpus gives us a strong human baseline.
 
-Drop-in replacement for V19Scorer in the miner; if v20 model file is missing
-or fails to load, falls back to v19 alone.
+Weights are configurable per hotkey:
+- weight_v19=1.0 -> pure v19 (conservative, ~1% bot calls on live)
+- weight_v19=0.5 -> balanced (~4-30% depending on agreement)
+- weight_v19=0.0 -> pure v21 (aggressive, ~32% bot calls on live)
 """
 from __future__ import annotations
 
@@ -18,26 +19,26 @@ import numpy as np
 
 
 class EnsembleScorer:
-    """v19 + v20 weighted ensemble. weight_v19 in [0, 1], v20 gets (1 - weight_v19)."""
-
     def __init__(self, weight_v19: float = 0.5):
         from neurons.v19_scorer import V19Scorer
         self.v19 = V19Scorer()
         self.weight_v19 = float(weight_v19)
-        self.v20: Optional[object] = None
+        self.v21: Optional[object] = None
         try:
-            from neurons.v20_scorer import V20Scorer
-            v20_path = Path(__file__).resolve().parent / "model_v20_transformer.pkl"
-            if v20_path.exists():
-                self.v20 = V20Scorer()
+            from neurons.v21_scorer import V21Scorer
+            v21_path = Path(__file__).resolve().parent / "model_v21_transformer.pkl"
+            if v21_path.exists():
+                self.v21 = V21Scorer()
         except Exception:
-            self.v20 = None
+            self.v21 = None
 
     def score_batch(self, chunks: List) -> np.ndarray:
         if not chunks:
             return np.zeros(0, dtype=float)
         p19 = self.v19.score_batch(chunks)
-        if self.v20 is None:
+        if self.v21 is None or self.weight_v19 >= 1.0:
             return p19
-        p20 = self.v20.score_batch(chunks)
-        return np.clip(self.weight_v19 * p19 + (1.0 - self.weight_v19) * p20, 0.0, 1.0)
+        p21 = self.v21.score_batch(chunks)
+        if self.weight_v19 <= 0.0:
+            return np.clip(p21, 0.0, 1.0)
+        return np.clip(self.weight_v19 * p19 + (1.0 - self.weight_v19) * p21, 0.0, 1.0)
