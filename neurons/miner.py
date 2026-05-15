@@ -94,7 +94,7 @@ class Miner(BaseMinerNeuron):
                 Path(__file__).resolve().parent / "models.py",
             ],
             defaults={
-                "model_name": "poker44-v24-cap35-floor05-h1",
+                "model_name": "poker44-v24-floor15-cap35-h1",
                 "model_version": "17",
                 "framework": "xgb+lgbm-real-gt+otsu-cap30",
                 "license": "MIT",
@@ -182,10 +182,10 @@ class Miner(BaseMinerNeuron):
             try:
                 from neurons.aceguard_calibration import adaptive_safe_calibrate
                 raw = _v17.score_batch(chunks)
-                # h1 v24 transformer with expanded cap: top miner has 0.59 reward
-                # implying ~50% recall. Push our cap higher to match competitive
-                # bot-call rate while keeping FPR safe via Otsu-only floor.
-                calibrated = adaptive_safe_calibrate(raw.tolist(), max_bot_fraction=0.35, min_bot_fraction=0.05)
+                # h1 v24 + aggressive floor: top miner at 0.59 reward implies
+                # ~50% recall. Force 6/40 minimum to match call rate. FPR risk
+                # if v24's top-6 picks are wrong, but it's the bet to actually score.
+                calibrated = adaptive_safe_calibrate(raw.tolist(), max_bot_fraction=0.35, min_bot_fraction=0.15)
                 scores = [round(float(s), 6) for s in calibrated]
                 synapse.risk_scores = scores
                 synapse.predictions = [s > 0.5 for s in scores]
