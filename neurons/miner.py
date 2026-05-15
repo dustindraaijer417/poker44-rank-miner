@@ -29,8 +29,8 @@ from neurons.v15_heuristic import score_chunk_v15
 from neurons.v16_heuristic import score_chunk_v16
 from neurons.models import _EnsembleModel, _TripleEnsemble, _V12RobustEnsemble, _V14Ensemble  # noqa: F401  -- pickle
 try:
-    from neurons.ensemble_scorer import EnsembleScorer
-    _v17 = EnsembleScorer(weight_v19=0.0)  # h1 pure v21 transformer (aggressive, ~32% bot rate)
+    from neurons.v22_scorer import V22Scorer
+    _v17 = V22Scorer()  # h1 pure v22 transformer (precision, ~10% bot rate, 96% decisive)
 except Exception as _e:
     _v17 = None
 
@@ -88,15 +88,13 @@ class Miner(BaseMinerNeuron):
                 Path(__file__).resolve().parent / "v14_features.py",
                 Path(__file__).resolve().parent / "v15_heuristic.py",
                 Path(__file__).resolve().parent / "v16_heuristic.py",
-                Path(__file__).resolve().parent / "v19_scorer.py",
-                Path(__file__).resolve().parent / "v21_scorer.py",
-                Path(__file__).resolve().parent / "ensemble_scorer.py",
+                Path(__file__).resolve().parent / "v22_scorer.py",
                 Path(__file__).resolve().parent / "aceguard_calibration.py",
                 Path(__file__).resolve().parent / "feature_extraction.py",
                 Path(__file__).resolve().parent / "models.py",
             ],
             defaults={
-                "model_name": "poker44-v21-transformer-aggressive-h1",
+                "model_name": "poker44-v22-transformer-precision-h1",
                 "model_version": "17",
                 "framework": "xgb+lgbm-real-gt+otsu-cap30",
                 "license": "MIT",
@@ -184,10 +182,9 @@ class Miner(BaseMinerNeuron):
             try:
                 from neurons.aceguard_calibration import adaptive_safe_calibrate
                 raw = _v17.score_batch(chunks)
-                # h1 AGGRESSIVE: pure v21 transformer ranking, raw output (no Otsu).
-                # v21 naturally calls ~32% bot on live data; trust its discrimination.
-                # Light cap at 50% to avoid extreme over-calling.
-                calibrated = adaptive_safe_calibrate(raw.tolist(), max_bot_fraction=0.50, min_bot_fraction=0.0)
+                # h1 PRECISION: pure v22 transformer (CLS pooling, 96% decisive on live).
+                # Natural bot rate ~10% with high confidence; cap at 20% as safety ceiling.
+                calibrated = adaptive_safe_calibrate(raw.tolist(), max_bot_fraction=0.20, min_bot_fraction=0.0)
                 scores = [round(float(s), 6) for s in calibrated]
                 synapse.risk_scores = scores
                 synapse.predictions = [s > 0.5 for s in scores]

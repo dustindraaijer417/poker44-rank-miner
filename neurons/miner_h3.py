@@ -40,8 +40,8 @@ from neurons.v14_features import extract_v14_features
 from neurons.aceguard_calibration import adaptive_safe_calibrate
 from neurons.models import _EnsembleModel, _TripleEnsemble, _V12RobustEnsemble, _V14Ensemble  # noqa: F401
 try:
-    from neurons.ensemble_scorer import EnsembleScorer
-    _v17 = EnsembleScorer(weight_v19=0.5)  # h3: 50/50 v19 + v21 transformer (balanced)
+    from neurons.v21_scorer import V21Scorer
+    _v17 = V21Scorer()  # h3: pure v21 transformer (aggressive, ~32% bot rate)
 except Exception:
     _v17 = None
 
@@ -81,14 +81,12 @@ class Miner(BaseMinerNeuron):
             repo_root=repo_root,
             implementation_files=[
                 Path(__file__).resolve(),
-                Path(__file__).resolve().parent / "v19_scorer.py",
                 Path(__file__).resolve().parent / "v21_scorer.py",
-                Path(__file__).resolve().parent / "ensemble_scorer.py",
                 Path(__file__).resolve().parent / "v14_features.py",
                 Path(__file__).resolve().parent / "aceguard_calibration.py",
             ],
             defaults={
-                "model_name": "poker44-v19-v21-balanced-h3",
+                "model_name": "poker44-v21-transformer-aggressive-h3",
                 "model_version": "17",
                 "framework": "v17-ensemble+adaptive-otsu-cap45",
                 "license": "MIT",
