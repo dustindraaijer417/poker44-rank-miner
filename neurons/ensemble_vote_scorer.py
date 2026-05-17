@@ -34,18 +34,18 @@ class EnsembleVoteScorer:
         s22 = self.v22.score_batch(chunks)
         s24 = self.v24.score_batch(chunks)
 
-        # Count bot votes (score > 0.5) and human votes (score < 0.05) across models
         bot_votes = (s19 > 0.5).astype(int) + (s21 > 0.5).astype(int) + (s22 > 0.5).astype(int) + (s24 > 0.5).astype(int)
         human_votes = (s19 < 0.05).astype(int) + (s21 < 0.05).astype(int) + (s22 < 0.05).astype(int) + (s24 < 0.05).astype(int)
         avg = (s19 + s21 + s22 + s24) / 4.0
 
         out = np.zeros(len(chunks), dtype=float)
-        # Strong bot consensus: 3+ vote bot AND avg confidence > 0.6
-        strong_bot = (bot_votes >= 3) & (avg > 0.6)
-        # Strong human consensus: 3+ vote human AND avg < 0.1
+        # Tiered confidence:
+        strong_bot = (bot_votes >= 3) & (avg > 0.5)
+        medium_bot = (bot_votes >= 2) & (avg > 0.3) & ~strong_bot
         strong_human = (human_votes >= 3) & (avg < 0.1)
-        # Otherwise: damped average (lean conservative to avoid FPR)
-        out[:] = avg * 0.5
+        # Default: damped average
+        out[:] = avg * 0.7
         out[strong_bot] = np.clip(0.85 + 0.1 * avg[strong_bot], 0.5, 0.97)
+        out[medium_bot] = np.clip(0.55 + 0.2 * avg[medium_bot], 0.5, 0.85)
         out[strong_human] = np.clip(0.02 + 0.5 * avg[strong_human], 0.0, 0.1)
         return np.clip(out, 0.0, 1.0)
