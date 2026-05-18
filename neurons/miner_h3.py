@@ -86,7 +86,7 @@ class Miner(BaseMinerNeuron):
                 Path(__file__).resolve().parent / "aceguard_calibration.py",
             ],
             defaults={
-                "model_name": "poker44-v21-transformer-aggressive-h3",
+                "model_name": "poker44-v21-conservative-cap10-h3",
                 "model_version": "17",
                 "framework": "v17-ensemble+adaptive-otsu-cap45",
                 "license": "MIT",
@@ -214,7 +214,9 @@ class Miner(BaseMinerNeuron):
             # Adaptive Otsu calibration with aggressive 45% bot fraction cap
             # (validator distribution is 50/50; 45% is near-true rate while
             # leaving small safety margin to avoid FPR cliff at edge cases)
-            calibrated = adaptive_safe_calibrate(v17_probs, max_bot_fraction=0.45, min_bot_fraction=0.10)
+            # h3 CONSERVATIVE: owner confirmed FPR cliff penalty. v21 ranking
+            # only used for high-confidence picks. cap=0.10 max, no floor.
+            calibrated = adaptive_safe_calibrate(v17_probs, max_bot_fraction=0.10, min_bot_fraction=0.0)
             return [round(float(s), 6) for s in calibrated]
         except Exception as e:
             bt.logging.warning(f"Batch scoring failed: {e}; using fallback")

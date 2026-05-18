@@ -38,14 +38,7 @@ class EnsembleVoteScorer:
         human_votes = (s19 < 0.05).astype(int) + (s21 < 0.05).astype(int) + (s22 < 0.05).astype(int) + (s24 < 0.05).astype(int)
         avg = (s19 + s21 + s22 + s24) / 4.0
 
-        out = np.zeros(len(chunks), dtype=float)
-        # Tiered confidence:
-        strong_bot = (bot_votes >= 3) & (avg > 0.5)
-        medium_bot = (bot_votes >= 2) & (avg > 0.3) & ~strong_bot
-        strong_human = (human_votes >= 3) & (avg < 0.1)
-        # Default: damped average
-        out[:] = avg * 0.7
-        out[strong_bot] = np.clip(0.85 + 0.1 * avg[strong_bot], 0.5, 0.97)
-        out[medium_bot] = np.clip(0.55 + 0.2 * avg[medium_bot], 0.5, 0.85)
-        out[strong_human] = np.clip(0.02 + 0.5 * avg[strong_human], 0.0, 0.1)
-        return np.clip(out, 0.0, 1.0)
+        # Return raw average — let h2's calibration (adaptive_safe_calibrate
+        # with cap=0.10) determine bot calls. The ensemble's value is in the
+        # RANKING quality (4-model consensus gives better ranking than any single).
+        return np.clip(avg, 0.0, 1.0)

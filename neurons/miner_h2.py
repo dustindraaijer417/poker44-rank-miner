@@ -96,7 +96,7 @@ class Miner(BaseMinerNeuron):
                 Path(__file__).resolve().parent / "aceguard_calibration.py",
             ],
             defaults={
-                "model_name": "poker44-ensemble-vote-4model-h2",
+                "model_name": "poker44-ensemble-avg-conservative-h2",
                 "model_version": "17",
                 "framework": "v17-ensemble+voting+adaptive-otsu-cap8",
                 "license": "MIT",
@@ -161,7 +161,7 @@ class Miner(BaseMinerNeuron):
         return synapse
 
     def _score_batch(self, chunks):
-        """h2: 4-model ensemble voting (v19+v21+v22+v24) — raw output (no further calibration)."""
+        """h2: 4-model ensemble average + adaptive Otsu, cap=0.10 (conservative)."""
         n = len(chunks)
         if n == 0:
             return []
@@ -169,7 +169,9 @@ class Miner(BaseMinerNeuron):
             if _v17 is None:
                 return [0.5] * n
             raw = _v17.score_batch(chunks)
-            return [round(float(s), 6) for s in raw]
+            # Apply same cap=0.10 as h1/h3 — conservative under FPR cliff
+            calibrated = adaptive_safe_calibrate(raw.tolist(), max_bot_fraction=0.10, min_bot_fraction=0.0)
+            return [round(float(s), 6) for s in calibrated]
         except Exception as e:
             bt.logging.warning(f"Ensemble vote path failed: {e}; using fallback")
             return [0.25] * n
