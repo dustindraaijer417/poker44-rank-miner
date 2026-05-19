@@ -29,8 +29,8 @@ from neurons.v15_heuristic import score_chunk_v15
 from neurons.v16_heuristic import score_chunk_v16
 from neurons.models import _EnsembleModel, _TripleEnsemble, _V12RobustEnsemble, _V14Ensemble  # noqa: F401  -- pickle
 try:
-    from neurons.v24_scorer import V24Scorer
-    _v17 = V24Scorer()  # h1 v24 transformer (gen4, variable-length aux, 50 epochs)
+    from neurons.v_gpu_v3_scorer import VGPUv3Scorer
+    _v17 = VGPUv3Scorer()  # h1 GPU-trained on live pseudo (1.5M params, AP=1.0 on held-out pseudo)
 except Exception as _e:
     _v17 = None
 
@@ -88,13 +88,13 @@ class Miner(BaseMinerNeuron):
                 Path(__file__).resolve().parent / "v14_features.py",
                 Path(__file__).resolve().parent / "v15_heuristic.py",
                 Path(__file__).resolve().parent / "v16_heuristic.py",
-                Path(__file__).resolve().parent / "v24_scorer.py",
+                Path(__file__).resolve().parent / "v_gpu_v3_scorer.py",
                 Path(__file__).resolve().parent / "aceguard_calibration.py",
                 Path(__file__).resolve().parent / "feature_extraction.py",
                 Path(__file__).resolve().parent / "models.py",
             ],
             defaults={
-                "model_name": "poker44-v24-conservative-cap10-h1",
+                "model_name": "poker44-vgpu3-live-trained-h1",
                 "model_version": "17",
                 "framework": "xgb+lgbm-real-gt+otsu-cap30",
                 "license": "MIT",
@@ -182,10 +182,9 @@ class Miner(BaseMinerNeuron):
             try:
                 from neurons.aceguard_calibration import adaptive_safe_calibrate
                 raw = _v17.score_batch(chunks)
-                # h1 v24 CONSERVATIVE: owner confirmed FPR cliff is the killer.
-                # Pull back — only call bots when v24 is highly confident.
-                # cap=0.10 limits max calls; no floor (let Otsu pick natural).
-                calibrated = adaptive_safe_calibrate(raw.tolist(), max_bot_fraction=0.10, min_bot_fraction=0.0)
+                # h1 v_gpu_v3: GPU-trained on live pseudo-labels, naturally 19% bot rate.
+                # Trust the model's ranking. Light cap at 0.25 to avoid extremes.
+                calibrated = adaptive_safe_calibrate(raw.tolist(), max_bot_fraction=0.25, min_bot_fraction=0.0)
                 scores = [round(float(s), 6) for s in calibrated]
                 synapse.risk_scores = scores
                 synapse.predictions = [s > 0.5 for s in scores]
